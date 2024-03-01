@@ -1,15 +1,12 @@
 using System;
 using System.Numerics;
+using System.Collections.Generic;
 
 public class Converter {
-	public string from;
-	public string to;
-	private Codec source;
-	private Codec target;
+	public Codec source;
+	public Codec target;
 
 	public Converter(string from, string to) {
-		this.from = from;
-		this.to = to;
 		this.source = new Codec(from);
 		this.target = new Codec(to);
 	}
@@ -24,7 +21,8 @@ public class Converter {
 	}
 }
 
-class Codec {
+public class Codec {
+	public uint Radix { get; private set; }
 	public string Raw { get; private set; }
 	public char[] Chars { get; private set; }
 	public char ZeroChar { get; private set; }
@@ -33,9 +31,15 @@ class Codec {
 		this.Raw = raw;
 		this.Chars = raw.ToCharArray();
 
-		if (this.Chars.Length < 2) throw new Exception("Alphabet must consist of at least 2 chars");
+		if (new HashSet<char>(this.Chars).Count != this.Chars.Length) {
+			throw new Exception("All chars in alphabet must be unique");
+		}
+		if (this.Chars.Length < 2) {
+			throw new Exception("Alphabet must consist of at least 2 chars");
+		}
 
 		this.ZeroChar = this.Chars[0];
+		this.Radix = (uint) this.Chars.Length;
 	}
 	
 	public BigInteger Decode(string text) {

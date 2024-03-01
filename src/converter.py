@@ -5,12 +5,13 @@ class Codec:
         self.alphabet = alphabet
         self.chars = list(alphabet)
 
-        if len(self.chars) < 2:
-            raise ValueError('Alphabet must consist of at least 2 chars')
         if len(self.chars) != len(set(self.chars)):
             raise ValueError('All chars in alphabet must be unique')
+        if len(self.chars) < 2:
+            raise ValueError('Alphabet must consist of at least 2 chars')
 
         self.zero_char = self.chars[0]
+        self.radix = len(self.chars)
         
     def decode(self, text: str) -> int:
         length = len(text)

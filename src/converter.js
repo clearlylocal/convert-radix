@@ -1,31 +1,26 @@
 // @ts-check
 
 class Converter {
-	#source
-	#target
-
 	/**
-	 * @param {string} from the alphabet to convert from
-	 * @param {string} to the alphabet to convert to
+	 * @param {string} from - the source alphabet to convert from
+	 * @param {string} to - the target alphabet to convert into
 	 */
 	constructor(from, to) {
-		this.from = from
-		this.to = to
-		this.#source = new Codec(from)
-		this.#target = new Codec(to)
+		this.source = new Codec(from)
+		this.target = new Codec(to)
 	}
 
 	/**
-	 * @param {string} text
-	 * @returns input converted from source alphabet into target alphabet
+	 * @param {string} text - the text to convert
+	 * @returns text converted from the source alphabet into the target alphabet
 	 */
 	convert(text) {
-		const decoded = this.#source.decode(text)
-		const converted = this.#target.encode(decoded)
+		const decoded = this.source.decode(text)
+		const converted = this.target.encode(decoded)
 
-		const numLeadingZeros = this.#source.getNumLeadingZeroChars(text)
+		const numLeadingZeros = this.source.getNumLeadingZeroChars(text)
 
-		return this.#target.zeroChar.repeat(numLeadingZeros) + converted
+		return this.target.zeroChar.repeat(numLeadingZeros) + converted
 	}
 }
 
@@ -35,10 +30,11 @@ class Codec {
 		this.alphabet = alphabet
 		this.chars = [...alphabet]
 
-		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 		if (new Set(this.chars).size !== this.chars.length) throw new TypeError('All chars in alphabet must be unique')
+		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 
 		this.zeroChar = this.chars[0]
+		this.radix = this.chars.length
 	}
 
 	/** @param {string} text */
