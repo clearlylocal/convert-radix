@@ -33,6 +33,7 @@ class Codec {
 		if (new Set(this.chars).size !== this.chars.length) throw new TypeError('All chars in alphabet must be unique')
 		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 
+		this.values = new Map(this.chars.map((char, idx) => [char, idx]))
 		this.zeroChar = this.chars[0]
 		this.radix = this.chars.length
 	}
@@ -46,8 +47,8 @@ class Codec {
 		let total = 0n
 
 		for (const [idx, char] of chars.entries()) {
-			const val = this.chars.indexOf(char)
-			if (val === -1) throw new RangeError(`${char} not found in alphabet`)
+			const val = this.values.get(char)
+			if (val == null) throw new RangeError(`${char} not found in alphabet`)
 			const place = length - BigInt(idx) - 1n
 			total += BigInt(val) * radix ** place
 		}

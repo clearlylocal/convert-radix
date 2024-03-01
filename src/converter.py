@@ -10,6 +10,7 @@ class Codec:
         if len(self.chars) < 2:
             raise ValueError('Alphabet must consist of at least 2 chars')
 
+        self.values = dict([(char, idx) for (idx, char) in enumerate(self.chars)])
         self.zero_char = self.chars[0]
         self.radix = len(self.chars)
         
@@ -20,7 +21,9 @@ class Codec:
         total = 0
 
         for idx, char in enumerate(text):
-            val = self.chars.index(char)
+            val = self.values.get(char)
+            if (val == None):
+                raise ValueError(f"{char} not found in alphabet")
             place = length - idx - 1
             total += val * (radix ** place)
 

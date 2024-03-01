@@ -23,14 +23,15 @@ public class Converter {
 }
 
 public class Codec {
-	public uint Radix { get; private set; }
-	public string Raw { get; private set; }
+	public string Alphabet { get; private set; }
 	public char[] Chars { get; private set; }
+	public Dictionary<char, uint> Values { get; private set; }
 	public char ZeroChar { get; private set; }
+	public uint Radix { get; private set; }
 
-	public Codec(string raw) {
-		this.Raw = raw;
-		this.Chars = raw.ToCharArray();
+	public Codec(string alphabet) {
+		this.Alphabet = alphabet;
+		this.Chars = alphabet.ToCharArray();
 
 		if (new HashSet<char>(this.Chars).Count != this.Chars.Length) {
 			throw new Exception("All chars in alphabet must be unique");
@@ -39,6 +40,9 @@ public class Codec {
 			throw new Exception("Alphabet must consist of at least 2 chars");
 		}
 
+		this.Values = alphabet
+			.Select((value, index) => new { value, index })
+            .ToDictionary((pair) => pair.value, pair => (uint) pair.index);
 		this.ZeroChar = this.Chars[0];
 		this.Radix = (uint) this.Chars.Length;
 	}
@@ -51,10 +55,13 @@ public class Codec {
 		var total = (BigInteger) 0;
 
 		for (int i = 0; i < length; i++) {
-			var val = Array.IndexOf(this.Chars, chars[i]);
-			if (val == -1) throw new Exception($"{chars[i]} not found in alphabet");
-			var place = length - i - 1;
-			total += (BigInteger) val * BigInteger.Pow(radix, place);
+			uint val;
+			if (this.Values.TryGetValue(chars[i], out val)) {
+				var place = length - i - 1;
+				total += (BigInteger) val * BigInteger.Pow(radix, place);
+			} else {
+				throw new Exception($"{chars[i]} not found in alphabet");
+			}
 		}
 
 		return total;
