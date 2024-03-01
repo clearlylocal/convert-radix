@@ -3,21 +3,21 @@ using System.Numerics;
 using System.Collections.Generic;
 
 public class Converter {
-	public Codec source;
-	public Codec target;
+	public Codec Source;
+	public Codec Target;
 
 	public Converter(string from, string to) {
-		this.source = new Codec(from);
-		this.target = new Codec(to);
+		this.Source = new Codec(from);
+		this.Target = new Codec(to);
 	}
 
 	public string Convert(string text) {
-		var decoded = this.source.Decode(text);
-		var converted = this.target.Encode(decoded);
+		var decoded = this.Source.Decode(text);
+		var converted = this.Target.Encode(decoded);
 
-		var numLeadingZeros = this.source.GetNumLeadingZeroChars(text);
+		var numLeadingZeros = this.Source.GetNumLeadingZeroChars(text);
 
-		return new string(this.target.ZeroChar, numLeadingZeros) + converted;
+		return new string(this.Target.ZeroChar, numLeadingZeros) + converted;
 	}
 }
 
@@ -89,22 +89,6 @@ public class Codec {
 }
 
 public static class Alphabet {
-	public static readonly string Original = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	public static readonly string Friendly = "34679ACDEFGHJKLMNPQRTUVWXYabcdefghijkmnopqrstuvwxyz";
-}
-
-class Test {
-	static void Main() {
-		var text = "0000000Jkhsjk27389h9854dhsfjkh4ihJHJSDFHKJGFh7548";
-		var converted = new Converter(Alphabet.Original, Alphabet.Friendly).Convert(text);
-		var roundTripped = new Converter(Alphabet.Friendly, Alphabet.Original).Convert(converted);
-
-		Console.WriteLine($"text: {text}");
-		Console.WriteLine($"converted: {converted}");
-		Console.WriteLine($"roundTripped: {roundTripped}");
-
-		if (roundTripped != text) {
-			throw new Exception($"{roundTripped} != {text}");
-		}
-	}
+	public static readonly string Base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	public static readonly string Base42 = "34679ACDEFGHJKLMNPQRTUXYabefghijkopqstuxyz";
 }

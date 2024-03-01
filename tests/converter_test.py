@@ -10,14 +10,14 @@ from src.converter import Converter, Alphabet
 
 class TestConvert(unittest.TestCase):
     def test_convert(self):
-        original_to_friendly = Converter(Alphabet.Original.value, Alphabet.Friendly.value)
-        friendly_to_original = Converter(Alphabet.Friendly.value, Alphabet.Original.value)
-        
+        b62_to_b42 = Converter(Alphabet.Base62.value, Alphabet.Base42.value)
+        b42_to_b62 = Converter(Alphabet.Base42.value, Alphabet.Base62.value)
+
         for _, row in read_csv('./tests/fixtures/data.csv').iterrows():
-            converted = original_to_friendly.convert(row['id'])
-            self.assertEqual(converted, row['friendly'])
-            round_tripped = friendly_to_original.convert(converted)
-            self.assertEqual(round_tripped, row['id'])
+            converted = b62_to_b42.convert(row['base62'])
+            self.assertEqual(converted, row['base42'])
+            round_tripped = b42_to_b62.convert(converted)
+            self.assertEqual(round_tripped, row['base62'])
 
 if __name__ == '__main__':
     unittest.main()

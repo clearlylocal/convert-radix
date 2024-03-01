@@ -88,8 +88,10 @@ class Codec {
 
 /**  @enum {typeof Alphabet[keyof typeof Alphabet]} */
 const Alphabet = /** @type {const} */ ({
-	Original: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-	Friendly: '34679ACDEFGHJKLMNPQRTUVWXYabcdefghijkmnopqrstuvwxyz',
+	/** https://en.wikipedia.org/wiki/Base62 */
+	Base62: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+	/** OCR-optimized alphabet with ambiguous-looking chars 0/O, l/1/I, 2/Z, 5/S, B/8, m/rn, d/cl, w/vv, W/VV removed */
+	Base42: '34679ACDEFGHJKLMNPQRTUXYabefghijkopqstuxyz',
 })
 
 export { Alphabet, Codec, Converter }

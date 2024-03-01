@@ -69,5 +69,5 @@ class Converter:
         return self.__target.zero_char * num_leading_zeros + converted
 
 class Alphabet(Enum):
-    Original = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-    Friendly = '34679ACDEFGHJKLMNPQRTUVWXYabcdefghijkmnopqrstuvwxyz'
+    Base62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    Base42 = '34679ACDEFGHJKLMNPQRTUXYabefghijkopqstuxyz'
