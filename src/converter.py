@@ -31,19 +31,14 @@ class Codec:
             raise ValueError(f"{num} is negative")
 
         radix = len(self.chars)
-        encoded = ''
+        encoded = []
 
-        max_exponent = 0
-        while radix ** max_exponent <= num:
-            max_exponent += 1
+        while num:
+            encoded.append(self.chars[num % radix])
+            num //= radix
 
-        for exponent in range(max_exponent - 1, -1, -1):
-            val = num // (radix ** exponent)
-
-            encoded += self.chars[val]
-            num -= val * (radix ** exponent)
-
-        return encoded
+        encoded.reverse()
+        return ''.join(encoded)
 
     def get_num_leading_zero_chars(self, text: str) -> int:
         idx = 0

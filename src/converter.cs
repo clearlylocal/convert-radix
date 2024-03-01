@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using System.Collections.Generic;
 
@@ -45,7 +46,7 @@ public class Codec {
 	public BigInteger Decode(string text) {
 		var chars = text.ToCharArray();
 		var length = chars.Length;
-		var radix =  (BigInteger) this.Chars.Length;
+		var radix = (BigInteger) this.Chars.Length;
 
 		var total = (BigInteger) 0;
 
@@ -63,19 +64,15 @@ public class Codec {
 		if (num < 0) throw new Exception($"{num} is negative");
 
 		var radix = (BigInteger) this.Chars.Length;
-		var encoded = "";
+		var encoded = new List<char>();
 
-		var maxExponent = 0;
-		while (BigInteger.Pow(radix, maxExponent) <= num) maxExponent++;
-
-		for (var exponent = maxExponent - 1; exponent >= 0; --exponent) {
-			var val = num / (BigInteger) BigInteger.Pow(radix, exponent);
-
-			encoded += this.Chars[(int) val];
-			num -= val * (BigInteger) BigInteger.Pow(radix, exponent);
+		while (num > 0) {
+			encoded.Add(this.Chars[(int) (num % radix)]);
+			num /= radix;
 		}
 
-		return encoded;
+		encoded.Reverse();
+		return String.Join("", encoded);
 	}
 
 	public int GetNumLeadingZeroChars(string text) {

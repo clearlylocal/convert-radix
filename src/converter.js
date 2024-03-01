@@ -60,19 +60,16 @@ class Codec {
 		if (num < 0n) throw new RangeError(`${num} is negative`)
 
 		const radix = BigInt(this.chars.length)
-		let encoded = ''
+		/** @type {string[]} */
+		const encoded = []
 
-		let maxExponent = 0n
-		while (radix ** maxExponent <= num) ++maxExponent
-
-		for (let exponent = maxExponent - 1n; exponent >= 0n; --exponent) {
-			const val = num / radix ** exponent
-
-			encoded += this.chars[Number(val)]
-			num -= val * radix ** exponent
+		while (num) {
+			encoded.push(this.chars[Number(num % radix)])
+			// floor division
+			num /= radix
 		}
 
-		return encoded
+		return encoded.reverse().join('')
 	}
 
 	/** @param {string} text */
