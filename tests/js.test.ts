@@ -1,5 +1,5 @@
 import { parse } from 'std/csv/mod.ts'
-import { assertEquals, assertThrows } from 'std/assert/mod.ts'
+import { assert, assertEquals, assertThrows } from 'std/assert/mod.ts'
 import { Alphabet, Codec, Converter } from '../src/converter.js'
 
 Deno.test('data.csv', async () => {
@@ -13,6 +13,32 @@ Deno.test('data.csv', async () => {
 		assertEquals(converted, base42)
 		const roundTripped = b42ToB62.convert(converted)
 		assertEquals(roundTripped, base62)
+	}
+})
+
+Deno.test('Alphabet', async (t) => {
+	for (const [_name, alphabet] of Object.entries(Alphabet)) {
+		const name = _name as keyof typeof Alphabet
+
+		await t.step(name, async (t) => {
+			await t.step('all chars unique', () => {
+				assertEquals([...new Set([...alphabet])].join(''), alphabet)
+			})
+
+			await t.step('lexicographically sorted', () => {
+				assertEquals(alphabet, [...alphabet].sort().join(''))
+				assertEquals(alphabet, [...alphabet].sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join(''))
+			})
+
+			await t.step('only ASCII alphanumeric', () => {
+				assert(!/[^0-9A-Za-z]/.test(alphabet))
+			})
+
+			await t.step('radix matches name', () => {
+				const radix = Number(name.replace(/^Base/, ''))
+				assert([...alphabet].length === radix)
+			})
+		})
 	}
 })
 
