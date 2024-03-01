@@ -33,16 +33,15 @@ class Codec {
 		if (new Set(this.chars).size !== this.chars.length) throw new TypeError('All chars in alphabet must be unique')
 		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 
-		this.values = new Map(this.chars.map((char, idx) => [char, idx]))
+		this.radix = BigInt(this.chars.length)
+		this.values = new Map(this.chars.map((char, idx) => [char, BigInt(idx)]))
 		this.zeroChar = this.chars[0]
-		this.radix = this.chars.length
 	}
 
 	/** @param {string} text */
 	decode(text) {
 		const chars = [...text]
 		const length = BigInt(chars.length)
-		const radix = BigInt(this.chars.length)
 
 		let total = 0n
 
@@ -50,7 +49,7 @@ class Codec {
 			const val = this.values.get(char)
 			if (val == null) throw new RangeError(`${char} not found in alphabet`)
 			const place = length - BigInt(idx) - 1n
-			total += BigInt(val) * radix ** place
+			total += val * this.radix ** place
 		}
 
 		return total
@@ -60,14 +59,13 @@ class Codec {
 	encode(num) {
 		if (num < 0n) throw new RangeError(`${num} is negative`)
 
-		const radix = BigInt(this.chars.length)
 		/** @type {string[]} */
 		const encoded = []
 
 		while (num) {
-			encoded.push(this.chars[Number(num % radix)])
+			encoded.push(this.chars[Number(num % this.radix)])
 			// floor division
-			num /= radix
+			num /= this.radix
 		}
 
 		return encoded.reverse().join('')

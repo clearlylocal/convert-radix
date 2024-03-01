@@ -25,9 +25,9 @@ public class Converter {
 public class Codec {
 	public string Alphabet { get; private set; }
 	public char[] Chars { get; private set; }
-	public Dictionary<char, uint> Values { get; private set; }
+	public Dictionary<char, BigInteger> Values { get; private set; }
 	public char ZeroChar { get; private set; }
-	public uint Radix { get; private set; }
+	public BigInteger Radix { get; private set; }
 
 	public Codec(string alphabet) {
 		this.Alphabet = alphabet;
@@ -40,25 +40,24 @@ public class Codec {
 			throw new Exception("Alphabet must consist of at least 2 chars");
 		}
 
+		this.Radix = (BigInteger) this.Chars.Length;
 		this.Values = alphabet
 			.Select((value, index) => new { value, index })
-            .ToDictionary((pair) => pair.value, pair => (uint) pair.index);
+            .ToDictionary((pair) => pair.value, pair => (BigInteger) pair.index);
 		this.ZeroChar = this.Chars[0];
-		this.Radix = (uint) this.Chars.Length;
 	}
 	
 	public BigInteger Decode(string text) {
 		var chars = text.ToCharArray();
 		var length = chars.Length;
-		var radix = (BigInteger) this.Chars.Length;
 
 		var total = (BigInteger) 0;
 
 		for (int i = 0; i < length; i++) {
-			uint val;
+			BigInteger val;
 			if (this.Values.TryGetValue(chars[i], out val)) {
 				var place = length - i - 1;
-				total += (BigInteger) val * BigInteger.Pow(radix, place);
+				total += val * BigInteger.Pow(this.Radix, place);
 			} else {
 				throw new Exception($"{chars[i]} not found in alphabet");
 			}
@@ -70,12 +69,11 @@ public class Codec {
 	public string Encode(BigInteger num) {
 		if (num < 0) throw new Exception($"{num} is negative");
 
-		var radix = (BigInteger) this.Chars.Length;
 		var encoded = new List<char>();
 
 		while (num > 0) {
-			encoded.Add(this.Chars[(int) (num % radix)]);
-			num /= radix;
+			encoded.Add(this.Chars[(int) (num % this.Radix)]);
+			num /= this.Radix;
 		}
 
 		encoded.Reverse();

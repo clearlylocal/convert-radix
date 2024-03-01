@@ -45,7 +45,7 @@ Deno.test('Alphabet', async (t) => {
 Deno.test('Codec', async (t) => {
 	await t.step('decode', () => assertEquals(new Codec('01').decode('1101'), 13n))
 	await t.step('encode', () => assertEquals(new Codec('01').encode(13n), '1101'))
-	await t.step('radix', () => assertEquals(new Codec('01').radix, 2))
+	await t.step('radix', () => assertEquals(new Codec('01').radix, 2n))
 	await t.step('chars', () => assertEquals(new Codec('01').chars, ['0', '1']))
 	await t.step('zeroChar', () => assertEquals(new Codec('01').zeroChar, '0'))
 
@@ -106,10 +106,11 @@ Deno.test('Codec', async (t) => {
 		const codec = new Codec('01')
 		const _decode: (x: string) => bigint = codec.decode.bind(codec)
 		const _encode: (x: bigint) => string = codec.encode.bind(codec)
-		const _radix: number = codec.radix
-		const _chars: string[] = codec.chars
-		const _zeroChar: string = codec.zeroChar
 		const _alphabet: string = codec.alphabet
+		const _chars: string[] = codec.chars
+		const _radix: bigint = codec.radix
+		const _values: Map<string, bigint> = codec.values
+		const _zeroChar: string = codec.zeroChar
 	})
 })
 

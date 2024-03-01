@@ -10,13 +10,12 @@ class Codec:
         if len(self.chars) < 2:
             raise ValueError('Alphabet must consist of at least 2 chars')
 
+        self.radix = len(self.chars)
         self.values = dict([(char, idx) for (idx, char) in enumerate(self.chars)])
         self.zero_char = self.chars[0]
-        self.radix = len(self.chars)
         
     def decode(self, text: str) -> int:
         length = len(text)
-        radix = len(self.chars)
 
         total = 0
 
@@ -25,7 +24,7 @@ class Codec:
             if (val == None):
                 raise ValueError(f"{char} not found in alphabet")
             place = length - idx - 1
-            total += val * (radix ** place)
+            total += val * (self.radix ** place)
 
         return total
 
@@ -33,12 +32,11 @@ class Codec:
         if num < 0:
             raise ValueError(f"{num} is negative")
 
-        radix = len(self.chars)
         encoded = []
 
         while num:
-            encoded.append(self.chars[num % radix])
-            num //= radix
+            encoded.append(self.chars[num % self.radix])
+            num //= self.radix
 
         encoded.reverse()
         return ''.join(encoded)
