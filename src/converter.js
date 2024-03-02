@@ -6,8 +6,8 @@ class Converter {
 	 * @param {string} to - the target alphabet to convert into
 	 */
 	constructor(from, to) {
-		this.source = new Codec(from)
-		this.target = new Codec(to)
+		/** @readonly */ this.source = new Codec(from)
+		/** @readonly */ this.target = new Codec(to)
 	}
 
 	/**
@@ -27,15 +27,15 @@ class Converter {
 class Codec {
 	/** @param {string} alphabet */
 	constructor(alphabet) {
-		this.alphabet = alphabet
-		this.chars = [...alphabet]
+		/** @readonly */ this.alphabet = alphabet
+		/** @readonly */ this.chars = [...alphabet]
 
 		if (new Set(this.chars).size !== this.chars.length) throw new TypeError('All chars in alphabet must be unique')
 		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 
-		this.radix = BigInt(this.chars.length)
-		this.values = new Map(this.chars.map((char, idx) => [char, BigInt(idx)]))
-		this.zeroChar = this.chars[0]
+		/** @readonly */ this.radix = BigInt(this.chars.length)
+		/** @readonly */ this.values = new Map(this.chars.map((char, idx) => [char, BigInt(idx)]))
+		/** @readonly */ this.zeroChar = this.chars[0]
 	}
 
 	/** @param {string} text */

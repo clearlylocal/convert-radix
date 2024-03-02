@@ -4,8 +4,8 @@ using System.Numerics;
 using System.Collections.Generic;
 
 public class Converter {
-	public Codec Source;
-	public Codec Target;
+	public Codec Source { get; private set; }
+	public Codec Target { get; private set; }
 
 	public Converter(string from, string to) {
 		this.Source = new Codec(from);
@@ -46,7 +46,7 @@ public class Codec {
             .ToDictionary((pair) => pair.value, pair => (BigInteger) pair.index);
 		this.ZeroChar = this.Chars[0];
 	}
-	
+
 	public BigInteger Decode(string text) {
 		var chars = text.ToCharArray();
 		var length = chars.Length;

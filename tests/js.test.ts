@@ -102,7 +102,7 @@ Deno.test('Codec', async (t) => {
 		}
 	})
 
-	await t.step('TS types', () => {
+	await t.step('TS types', async (t) => {
 		const codec = new Codec('01')
 		const _decode: (x: string) => bigint = codec.decode.bind(codec)
 		const _encode: (x: bigint) => string = codec.encode.bind(codec)
@@ -111,6 +111,21 @@ Deno.test('Codec', async (t) => {
 		const _radix: bigint = codec.radix
 		const _values: Map<string, bigint> = codec.values
 		const _zeroChar: string = codec.zeroChar
+
+		await t.step('props are readonly', () => {
+			void (() => {
+				// @ts-expect-error read-only property
+				codec.alphabet = {} as unknown as typeof codec.alphabet
+				// @ts-expect-error read-only property
+				codec.chars = {} as unknown as typeof codec.chars
+				// @ts-expect-error read-only property
+				codec.radix = {} as unknown as typeof codec.radix
+				// @ts-expect-error read-only property
+				codec.values = {} as unknown as typeof codec.values
+				// @ts-expect-error read-only property
+				codec.zeroChar = {} as unknown as typeof codec.zeroChar
+			})
+		})
 	})
 })
 
@@ -136,10 +151,19 @@ Deno.test('Converter', async (t) => {
 		assertEquals(abcToXyz.convert('aabbccaa'), 'xxyyzzxx')
 	})
 
-	await t.step('TS types', () => {
+	await t.step('TS types', async (t) => {
 		const converter = new Converter('01', '0123456789')
 		const _source: Codec = converter.source
 		const _target: Codec = converter.target
 		const _convert: (x: string) => string = converter.convert.bind(converter)
+
+		await t.step('props are readonly', () => {
+			void (() => {
+				// @ts-expect-error read-only property
+				converter.source = {} as unknown as typeof converter.source
+				// @ts-expect-error read-only property
+				converter.target = {} as unknown as typeof converter.target
+			})
+		})
 	})
 })
