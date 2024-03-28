@@ -35,8 +35,8 @@ Deno.test('Alphabet', async (t) => {
 			})
 
 			await t.step('radix matches name', () => {
-				const radix = Number(name.replace(/^Base/, ''))
-				assert([...alphabet].length === radix)
+				const radix = BigInt(name.replace(/^Base/, ''))
+				assert(new Codec(alphabet).radix === radix)
 			})
 		})
 	}
