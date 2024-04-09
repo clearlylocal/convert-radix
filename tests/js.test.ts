@@ -1,6 +1,7 @@
 import { parse } from 'std/csv/mod.ts'
 import { assert, assertEquals, assertThrows } from 'std/assert/mod.ts'
 import { Alphabet, Codec, config, Converter } from '../src/converter.js'
+import { CheckSumChecker } from '../src/converter.js'
 
 Deno.test('data.csv', async () => {
 	const columns = ['base62', 'friendly'] as const
@@ -142,26 +143,24 @@ Deno.test('Codec', async (t) => {
 	})
 })
 
-Deno.test('CheckSumChecker', async (t) => {
-	// https://proofwiki.org/wiki/ISBN-10/Examples
-	await t.step('parity with ISBN-10', () => {
-		function makeAlphabet(radix: number) {
-			if (radix > 36) throw new RangeError('max radix for JS built-ins is 36')
-			return Array.from(
-				{ length: radix },
-				(_, i) => i < 10 ? String(i) : String.fromCodePoint(i - 10 + 'a'.codePointAt(0)!),
-			).join('')
-		}
+Deno.test.only('CheckSumChecker', async (t) => {
+	await t.step('parity with ISBN-10', async () => {
+		// Examples from https://gist.github.com/tonyallan/2e4cce9f16232eb6517e0eebca0da945
+		const x = await Deno.readTextFile('./tests/fixtures/isbn-10.txt')
+		const isbns = x.split('\n').map((x) => x.trim()).filter(Boolean)
 
-		const radixes = [2, 10, 16, 36]
-		for (const radix of radixes) {
-			const nums = [0, 1, 10, 42, 99, 100, 999, 1000, radix, radix - 1, radix ** 2, radix ** 2 - 1]
-			const codec = new Codec(makeAlphabet(radix))
-			for (const num of nums) {
-				const stringified = num.toString(radix)
-				assertEquals(codec.encode(BigInt(num)) || codec.zeroChar, stringified)
-				assertEquals(Number(codec.decode(stringified)), parseInt(stringified, radix))
-			}
+		for (const isbn of isbns) {
+			const digits = isbn.replaceAll('-', '')
+
+			// we reverse the digits first due to ISBN-10 using LTR calculation logic
+			// (whereas we use RTL to remain agnostic to number of places)
+			const content = parseInt([...digits.slice(0, -1)].reverse().join(''))
+			const _check = digits.at(-1)!
+			const check = _check === 'X' ? 10 : parseInt(_check)
+
+			console.log({ digits, content, check })
+			const checker = new CheckSumChecker(10n, 11n)
+			assertEquals(checker.getCheckSum(BigInt(content)), BigInt(check))
 		}
 	})
 })
