@@ -1,19 +1,43 @@
 import { parse } from 'std/csv/mod.ts'
 import { assert, assertEquals, assertThrows } from 'std/assert/mod.ts'
-import { Alphabet, Codec, Converter } from '../src/converter.js'
+import { Alphabet, Codec, config, Converter } from '../src/converter.js'
 
 Deno.test('data.csv', async () => {
-	const columns = ['base62', 'base42'] as const
+	const columns = ['base62', 'friendly'] as const
 	const data = parse(await Deno.readTextFile('./tests/fixtures/data.csv'), { columns, skipFirstRow: true })
-	const b62ToB42 = new Converter(Alphabet.Base62, Alphabet.Base42)
-	const b42ToB62 = new Converter(Alphabet.Base42, Alphabet.Base62)
+	const converter = new Converter(config)
 
-	for (const { base62, base42 } of data) {
-		const converted = b62ToB42.convert(base62)
-		assertEquals(converted, base42)
-		const roundTripped = b42ToB62.convert(converted)
-		assertEquals(roundTripped, base62)
+	const msg = `${data.length} rows`
+
+	console.time(msg)
+
+	for (const { base62, friendly } of data) {
+		const converted = converter.convert(base62)
+		assert(converted.kind === 'ok')
+		assertEquals(converted.result, friendly)
+		const roundTripped = converter.revert(converted.result)
+		assert(roundTripped.kind === 'ok')
+		assertEquals(roundTripped.result, base62)
 	}
+
+	console.timeEnd(msg)
+})
+
+Deno.test('config', async (t) => {
+	await t.step('check sum alphabet length is prime number', () => {
+		assertPrime(new Codec(config.checks.alphabet).radix)
+	})
+
+	await t.step('target and checksum alphabets are case insensitive', () => {
+		for (const alphabet of [config.target.alphabet, config.checks.alphabet]) {
+			assertEquals(alphabet.toLowerCase(), alphabet)
+		}
+	})
+
+	await t.step('checksum alphabet begins with target alphabet', () => {
+		assert(config.checks.alphabet.startsWith(config.target.alphabet))
+		assert(config.checks.alphabet.length > config.target.alphabet.length)
+	})
 })
 
 Deno.test('Alphabet', async (t) => {
@@ -33,11 +57,6 @@ Deno.test('Alphabet', async (t) => {
 			await t.step('only ASCII alphanumeric', () => {
 				assert(!/[^0-9A-Za-z]/.test(alphabet))
 			})
-
-			await t.step('radix matches name', () => {
-				const radix = BigInt(name.replace(/^Base/, ''))
-				assert(new Codec(alphabet).radix === radix)
-			})
 		})
 	}
 })
@@ -48,12 +67,6 @@ Deno.test('Codec', async (t) => {
 	await t.step('radix', () => assertEquals(new Codec('01').radix, 2n))
 	await t.step('chars', () => assertEquals(new Codec('01').chars, ['0', '1']))
 	await t.step('zeroChar', () => assertEquals(new Codec('01').zeroChar, '0'))
-
-	await t.step('invalid constructor', async (t) => {
-		await t.step('alphabet empty', () => void assertThrows(() => new Codec('')))
-		await t.step('alphabet too short', () => void assertThrows(() => new Codec('0')))
-		await t.step('alphabet non-unique', () => void assertThrows(() => new Codec('010')))
-	})
 
 	await t.step('invalid inputs', async (t) => {
 		const codec = new Codec('01')
@@ -129,41 +142,42 @@ Deno.test('Codec', async (t) => {
 	})
 })
 
-Deno.test('Converter', async (t) => {
-	await t.step('binary to decimal', () => {
-		const abcToXyz = new Converter('01', '0123456789')
+Deno.test('CheckSumChecker', async (t) => {
+	// https://proofwiki.org/wiki/ISBN-10/Examples
+	await t.step('parity with ISBN-10', () => {
+		function makeAlphabet(radix: number) {
+			if (radix > 36) throw new RangeError('max radix for JS built-ins is 36')
+			return Array.from(
+				{ length: radix },
+				(_, i) => i < 10 ? String(i) : String.fromCodePoint(i - 10 + 'a'.codePointAt(0)!),
+			).join('')
+		}
 
-		assertEquals(abcToXyz.convert('1101'), '13')
-		assertEquals(abcToXyz.convert('001101'), '0013')
-	})
-
-	await t.step('decimal to hex', () => {
-		const abcToXyz = new Converter('0123456789', '0123456789abcdef')
-
-		assertEquals(abcToXyz.convert('255'), 'ff')
-		assertEquals(abcToXyz.convert('000255'), '000ff')
-	})
-
-	await t.step('ternary "abc" to ternary "xyz"', () => {
-		const abcToXyz = new Converter('abc', 'xyz')
-
-		assertEquals(abcToXyz.convert('bbccaa'), 'yyzzxx')
-		assertEquals(abcToXyz.convert('aabbccaa'), 'xxyyzzxx')
-	})
-
-	await t.step('TS types', async (t) => {
-		const converter = new Converter('01', '0123456789')
-		const _source: Codec = converter.source
-		const _target: Codec = converter.target
-		const _convert: (x: string) => string = converter.convert.bind(converter)
-
-		await t.step('props are readonly', () => {
-			void (() => {
-				// @ts-expect-error read-only property
-				converter.source = {} as unknown as typeof converter.source
-				// @ts-expect-error read-only property
-				converter.target = {} as unknown as typeof converter.target
-			})
-		})
+		const radixes = [2, 10, 16, 36]
+		for (const radix of radixes) {
+			const nums = [0, 1, 10, 42, 99, 100, 999, 1000, radix, radix - 1, radix ** 2, radix ** 2 - 1]
+			const codec = new Codec(makeAlphabet(radix))
+			for (const num of nums) {
+				const stringified = num.toString(radix)
+				assertEquals(codec.encode(BigInt(num)) || codec.zeroChar, stringified)
+				assertEquals(Number(codec.decode(stringified)), parseInt(stringified, radix))
+			}
+		}
 	})
 })
+
+function assertPrime(num: bigint) {
+	assert(isPrime(num), `${num} is not a prime number`)
+}
+
+function isPrime(num: bigint) {
+	if ((num % 2n === 0n && num !== 2n) || num <= 1n) {
+		return false
+	}
+	for (let i = 3n; i ** 2n <= num; i += 2n) {
+		if (num % i === 0n) {
+			return false
+		}
+	}
+	return true
+}

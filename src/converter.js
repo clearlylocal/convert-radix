@@ -1,26 +1,69 @@
 // @ts-check
 
+/**
+ * @typedef {{
+ * 	source: { alphabet: string, minLength: number },
+ * 	target: { alphabet: string, minLength: number },
+ * 	checks: { alphabet: string }
+ * }} Config
+ */
+
+/**
+ * @typedef {{ kind: 'ok', result: string } | { kind: 'error', message: string }} Result
+ */
+
 class Converter {
-	/**
-	 * @param {string} from - the source alphabet to convert from
-	 * @param {string} to - the target alphabet to convert into
-	 */
-	constructor(from, to) {
-		/** @readonly */ this.source = new Codec(from)
-		/** @readonly */ this.target = new Codec(to)
+	/** @param {Config} config */
+	constructor(config) {
+		/** @readonly */ this.config = config
+
+		/** @readonly */ this.sourceCodec = new Codec(config.source.alphabet)
+		/** @readonly */ this.targetCodec = new Codec(config.target.alphabet)
+		/** @readonly */ this.checksCodec = new Codec(config.checks.alphabet)
+		/** @readonly */ this.checker = new CheckSumChecker(this.targetCodec.radix, this.checksCodec.radix)
 	}
 
 	/**
 	 * @param {string} text - the text to convert
-	 * @returns text converted from the source alphabet into the target alphabet
+	 * @returns {Result} text converted from the source alphabet into the target alphabet, along with a check digit
 	 */
 	convert(text) {
-		const decoded = this.source.decode(text)
-		const converted = this.target.encode(decoded)
+		try {
+			const decoded = this.sourceCodec.decode(text)
+			const encoded = this.targetCodec.encode(decoded)
+			const checkSum = this.checker.getCheckSum(decoded)
+			const checkDigit = this.checksCodec.encode(checkSum).padStart(1, this.checksCodec.zeroChar)
 
-		const numLeadingZeros = this.source.getNumLeadingZeroChars(text)
+			const result = (encoded + checkDigit).padStart(this.config.target.minLength, this.targetCodec.zeroChar)
 
-		return this.target.zeroChar.repeat(numLeadingZeros) + converted
+			return { kind: 'ok', result }
+		} catch (e) {
+			return { kind: 'error', message: String(e?.message ?? e) }
+		}
+	}
+
+	/**
+	 * @param {string} text - the text to revert
+	 * @returns {Result} text reverted from the target alphabet to the source alphabet
+	 */
+	revert(text) {
+		try {
+			const checkDigit = text.at(-1)
+			assert(checkDigit, 'string cannot be empty')
+			const checkSum = this.checksCodec.decode(checkDigit)
+
+			const decoded = this.targetCodec.decode(text.slice(0, -1))
+
+			const expectedCheckSum = this.checker.getCheckSum(decoded)
+			assert(checkSum === expectedCheckSum, `Expected check sum ${expectedCheckSum}; actual ${checkSum}`)
+
+			const encoded = this.sourceCodec.encode(decoded)
+			const result = encoded.padStart(this.config.source.minLength, this.sourceCodec.zeroChar)
+
+			return { kind: 'ok', result }
+		} catch (e) {
+			return { kind: 'error', message: String(e?.message ?? e) }
+		}
 	}
 }
 
@@ -29,9 +72,6 @@ class Codec {
 	constructor(alphabet) {
 		/** @readonly */ this.alphabet = alphabet
 		/** @readonly */ this.chars = [...alphabet]
-
-		if (new Set(this.chars).size !== this.chars.length) throw new TypeError('All chars in alphabet must be unique')
-		if (this.chars.length < 2) throw new RangeError('Alphabet must consist of at least 2 chars')
 
 		/** @readonly */ this.radix = BigInt(this.chars.length)
 		/** @readonly */ this.values = new Map(this.chars.map((char, idx) => [char, BigInt(idx)]))
@@ -47,7 +87,7 @@ class Codec {
 
 		for (const [idx, char] of chars.entries()) {
 			const val = this.values.get(char)
-			if (val == null) throw new RangeError(`${char} not found in alphabet`)
+			assert(val != null, `${char} not found in alphabet`)
 			const place = length - BigInt(idx) - 1n
 			total += val * this.radix ** place
 		}
@@ -57,7 +97,7 @@ class Codec {
 
 	/** @param {bigint} num */
 	encode(num) {
-		if (num < 0n) throw new RangeError(`${num} is negative`)
+		assert(num >= 0n, `${num} is negative`)
 
 		/** @type {string[]} */
 		const encoded = []
@@ -82,12 +122,56 @@ class Codec {
 	}
 }
 
+class CheckSumChecker {
+	/**
+	 * @param {bigint} radix - must be integer > 1
+	 * @param {bigint} mod - must be positive, prime integer > radix
+	 */
+	constructor(radix, mod) {
+		this.radix = radix
+		this.mod = mod
+	}
+
+	/** @param {bigint} num */
+	getCheckSum(num) {
+		// based on [ISBN-10 algorithm](https://en.wikipedia.org/wiki/ISBN#ISBN-10_check_digits)
+		let total = 0n
+
+		let i = 1n
+		while (num) {
+			total += (num % this.radix) * i
+			num /= this.radix
+			;++i
+		}
+
+		return total % this.mod
+	}
+}
+
 /**  @enum {typeof Alphabet[keyof typeof Alphabet]} */
 const Alphabet = /** @type {const} */ ({
 	/** https://en.wikipedia.org/wiki/Base62 */
-	Base62: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-	/** OCR-optimized alphabet with ambiguous-looking chars 0/O, l/1/I, 2/Z, 5/S, B/8, m/rn, d/cl, w/vv, W/VV removed */
-	Base42: '34679ACDEFGHJKLMNPQRTUXYabefghijkopqstuxyz',
+	Source: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+	/** Base 28; lowercase only, OCR/human input optimized alphabet with ambiguous-looking chars removed */
+	Target: '023456789abcdefghijkopqstuxy',
+	/** Base 29; Target + 'z' */
+	Checks: '023456789abcdefghijkopqstuxyz',
 })
 
-export { Alphabet, Codec, Converter }
+/** @type {Config} */
+const config = {
+	source: { alphabet: Alphabet.Source, minLength: 5 },
+	target: { alphabet: Alphabet.Target, minLength: 6 },
+	checks: { alphabet: Alphabet.Checks },
+}
+
+/**
+ * @param {unknown} condition
+ * @param {string} [message]
+ * @returns {asserts condition}
+ */
+function assert(condition, message) {
+	if (!condition) throw new Error(message ?? 'Condition failed')
+}
+
+export { Alphabet, CheckSumChecker, Codec, config, Converter }

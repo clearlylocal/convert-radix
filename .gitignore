@@ -1,4 +1,5 @@
 .env
-__archive
-__pycache__
 *.exe
+*.exe.mdb
+*.class
+*.jar
