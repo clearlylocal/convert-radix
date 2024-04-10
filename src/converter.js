@@ -13,57 +13,51 @@
  */
 
 class Converter {
-	/** @param {Config} config */
+	/** @param {Config} [config] */
 	constructor(config) {
-		/** @readonly */ this.config = config
+		/** @readonly */ this.config = config ?? defaultConfig
 
-		/** @readonly */ this.sourceCodec = new Codec(config.source.alphabet)
-		/** @readonly */ this.targetCodec = new Codec(config.target.alphabet)
-		/** @readonly */ this.checksCodec = new Codec(config.checks.alphabet)
+		/** @readonly */ this.sourceCodec = new Codec(this.config.source.alphabet)
+		/** @readonly */ this.targetCodec = new Codec(this.config.target.alphabet)
+		/** @readonly */ this.checksCodec = new Codec(this.config.checks.alphabet)
 		/** @readonly */ this.checker = new CheckSumChecker(this.targetCodec.radix, this.checksCodec.radix)
 	}
 
 	/**
-	 * @param {string} text - the text to convert
-	 * @returns {Result} text converted from the source alphabet into the target alphabet, along with a check digit
+	 * @param {string} numberId - the Number ID to convert
+	 * @returns {string} input converted from the source alphabet into the target alphabet, along with a check digit
+	 * @throws if input text is invalid Number ID
 	 */
-	convert(text) {
-		try {
-			const decoded = this.sourceCodec.decode(text)
-			const encoded = this.targetCodec.encode(decoded)
-			const checkSum = this.checker.getCheckSum(decoded)
-			const checkDigit = this.checksCodec.encode(checkSum).padStart(1, this.checksCodec.zeroChar)
+	convert(numberId) {
+		const decoded = this.sourceCodec.decode(numberId)
+		const encoded = this.targetCodec.encode(decoded)
+		const checkSum = this.checker.getCheckSum(decoded)
+		const checkDigit = this.checksCodec.encode(checkSum) || this.checksCodec.zeroChar
 
-			const result = (encoded + checkDigit).padStart(this.config.target.minLength, this.targetCodec.zeroChar)
+		const friendlyId = (encoded + checkDigit).padStart(this.config.target.minLength, this.targetCodec.zeroChar)
 
-			return { kind: 'ok', result }
-		} catch (e) {
-			return { kind: 'error', message: String(e?.message ?? e) }
-		}
+		return friendlyId
 	}
 
 	/**
-	 * @param {string} text - the text to revert
-	 * @returns {Result} text reverted from the target alphabet to the source alphabet
+	 * @param {string} friendlyId - the text to revert
+	 * @returns {string} input reverted from the target alphabet to the source alphabet
+	 * @throws if check digit is wrong or if input text is invalid Friendly ID
 	 */
-	revert(text) {
-		try {
-			const checkDigit = text.at(-1)
-			assert(checkDigit, 'string cannot be empty')
-			const checkSum = this.checksCodec.decode(checkDigit)
+	revert(friendlyId) {
+		const checkDigit = friendlyId.at(-1)
+		assert(checkDigit, 'Friendly ID cannot be empty')
+		const checkSum = this.checksCodec.decode(checkDigit)
 
-			const decoded = this.targetCodec.decode(text.slice(0, -1))
+		const decoded = this.targetCodec.decode(friendlyId.slice(0, -1))
 
-			const expectedCheckSum = this.checker.getCheckSum(decoded)
-			assert(checkSum === expectedCheckSum, `Expected check sum ${expectedCheckSum}; actual ${checkSum}`)
+		const expectedCheckSum = this.checker.getCheckSum(decoded)
+		assert(checkSum === expectedCheckSum, `Expected check sum ${expectedCheckSum}; actual ${checkSum}`)
 
-			const encoded = this.sourceCodec.encode(decoded)
-			const result = encoded.padStart(this.config.source.minLength, this.sourceCodec.zeroChar)
+		const encoded = this.sourceCodec.encode(decoded)
+		const numberId = encoded.padStart(this.config.source.minLength, this.sourceCodec.zeroChar)
 
-			return { kind: 'ok', result }
-		} catch (e) {
-			return { kind: 'error', message: String(e?.message ?? e) }
-		}
+		return numberId
 	}
 }
 
@@ -159,7 +153,7 @@ const Alphabet = /** @type {const} */ ({
 })
 
 /** @type {Config} */
-const config = {
+const defaultConfig = {
 	source: { alphabet: Alphabet.Source, minLength: 5 },
 	target: { alphabet: Alphabet.Target, minLength: 6 },
 	checks: { alphabet: Alphabet.Checks },
@@ -174,4 +168,4 @@ function assert(condition, message) {
 	if (!condition) throw new Error(message ?? 'Condition failed')
 }
 
-export { Alphabet, CheckSumChecker, Codec, config, Converter }
+export { Alphabet, CheckSumChecker, Codec, Converter, defaultConfig }

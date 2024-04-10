@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class Tests {
 	public static void main(String[] args) {
-		Converter converter = Converter.init();
+		Converter converter = new Converter();
 
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader("./tests/fixtures/data.csv"));
@@ -45,7 +45,9 @@ public class Tests {
 				}
 			}
 
-			System.out.println("Finished " + data.size() + " rows in " + (System.currentTimeMillis() - start) + " ms");
+			System.out.println(
+				String.format("Finished %d rows in %d ms", data.size(), System.currentTimeMillis() - start)
+			);
 
 			reader.close();
 		} catch (Exception e) {
@@ -61,16 +63,16 @@ class Converter {
 	private final Codec checksCodec;
 	private final CheckSumChecker checker;
 
-	private Converter(Config config) {
+	public Converter() {
+		this(new Config());
+	}
+
+	public Converter(Config config) {
 		this.config = config;
 		this.sourceCodec = new Codec(config.source.alphabet);
 		this.targetCodec = new Codec(config.target.alphabet);
 		this.checksCodec = new Codec(config.checks.alphabet);
 		this.checker = new CheckSumChecker(this.targetCodec.radix, this.checksCodec.radix);
-	}
-
-	static Converter init() {
-		return new Converter(Config.init());
 	}
 
 	public String convert(String text) throws Exception {
@@ -100,7 +102,9 @@ class Converter {
 
 		long expectedCheckSum = this.checker.getCheckSum(decoded);
 		if (checkSum != expectedCheckSum) {
-			throw new IllegalArgumentException(String.format("Expected check sum %s; actual %s", expectedCheckSum, checkSum));
+			throw new IllegalArgumentException(
+				String.format("Expected check sum %s; actual %s", expectedCheckSum, checkSum)
+			);
 		}
 
 		String encoded = this.sourceCodec.encode(decoded);
@@ -122,7 +126,7 @@ class Codec {
 		this.radix = Long.valueOf(alphabet.length());
 		this.zeroChar = alphabet.charAt(0);
 
-		for (int i = 0; i < alphabet.length(); i++) {
+		for (int i = 0; i < alphabet.length(); ++i) {
 			values.put(alphabet.charAt(i), Long.valueOf(i));
 		}
 	}
@@ -131,11 +135,11 @@ class Codec {
 		long total = 0;
 		long length = Long.valueOf(text.length());
 
-		for (int i = 0; i < text.length(); i++) {
+		for (int i = 0; i < text.length(); ++i) {
 			char ch = text.charAt(i);
 			long val = this.values.get(ch);
 			if (Long.valueOf(val) == null) {
-				throw new IllegalArgumentException(ch + " not found in alphabet");
+				throw new IllegalArgumentException(String.format("%s not found in alphabet", ch));
 			}
 			long place = length - Long.valueOf(i) - 1;
 			total = total + val * (long) Math.pow(radix, place);
@@ -146,7 +150,7 @@ class Codec {
 
 	public String encode(long num) throws Exception {
 		if (num < 0) {
-			throw new IllegalArgumentException(num + " is negative");
+			throw new IllegalArgumentException(String.format("%d is negative", num));
 		}
 
 		StringBuilder encoded = new StringBuilder();
@@ -187,18 +191,19 @@ class Config {
 	public final TargetConfig target;
 	public final ChecksConfig checks;
 
-	private Config(SourceConfig source, TargetConfig target, ChecksConfig checks) {
-		this.source = source;
-		this.target = target;
-		this.checks = checks;
-	}
-
-	public static Config init() {
-		return new Config(
+	public Config() {
+		// default values
+		this(
 			new SourceConfig("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 5),
 			new TargetConfig("023456789abcdefghijkopqstuxy", 6),
 			new ChecksConfig("023456789abcdefghijkopqstuxyz")
 		);
+	}
+
+	public Config(SourceConfig source, TargetConfig target, ChecksConfig checks) {
+		this.source = source;
+		this.target = target;
+		this.checks = checks;
 	}
 
 	public static class SourceConfig {

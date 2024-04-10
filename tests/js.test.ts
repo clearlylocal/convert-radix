@@ -1,24 +1,22 @@
 import { parse } from 'std/csv/mod.ts'
 import { assert, assertEquals, assertThrows } from 'std/assert/mod.ts'
-import { Alphabet, Codec, config, Converter } from '../src/converter.js'
+import { Alphabet, Codec, Converter, defaultConfig } from '../src/converter.js'
 import { CheckSumChecker } from '../src/converter.js'
 
 Deno.test('data.csv', async () => {
 	const columns = ['base62', 'friendly'] as const
 	const data = parse(await Deno.readTextFile('./tests/fixtures/data.csv'), { columns, skipFirstRow: true })
-	const converter = new Converter(config)
+	const converter = new Converter()
 
-	const msg = `${data.length} rows`
+	const msg = `Finished ${data.length} rows in`
 
 	console.time(msg)
 
 	for (const { base62, friendly } of data) {
 		const converted = converter.convert(base62)
-		assert(converted.kind === 'ok')
-		assertEquals(converted.result, friendly)
-		const roundTripped = converter.revert(converted.result)
-		assert(roundTripped.kind === 'ok')
-		assertEquals(roundTripped.result, base62)
+		assertEquals(converted, friendly)
+		const roundTripped = converter.revert(converted)
+		assertEquals(roundTripped, base62)
 	}
 
 	console.timeEnd(msg)
@@ -26,18 +24,18 @@ Deno.test('data.csv', async () => {
 
 Deno.test('config', async (t) => {
 	await t.step('check sum alphabet length is prime number', () => {
-		assertPrime(new Codec(config.checks.alphabet).radix)
+		assertPrime(new Codec(defaultConfig.checks.alphabet).radix)
 	})
 
 	await t.step('target and checksum alphabets are case insensitive', () => {
-		for (const alphabet of [config.target.alphabet, config.checks.alphabet]) {
+		for (const alphabet of [defaultConfig.target.alphabet, defaultConfig.checks.alphabet]) {
 			assertEquals(alphabet.toLowerCase(), alphabet)
 		}
 	})
 
 	await t.step('checksum alphabet begins with target alphabet', () => {
-		assert(config.checks.alphabet.startsWith(config.target.alphabet))
-		assert(config.checks.alphabet.length > config.target.alphabet.length)
+		assert(defaultConfig.checks.alphabet.startsWith(defaultConfig.target.alphabet))
+		assert(defaultConfig.checks.alphabet.length > defaultConfig.target.alphabet.length)
 	})
 })
 
@@ -143,7 +141,7 @@ Deno.test('Codec', async (t) => {
 	})
 })
 
-Deno.test.only('CheckSumChecker', async (t) => {
+Deno.test('CheckSumChecker', async (t) => {
 	await t.step('parity with ISBN-10', async () => {
 		// Examples from https://gist.github.com/tonyallan/2e4cce9f16232eb6517e0eebca0da945
 		const x = await Deno.readTextFile('./tests/fixtures/isbn-10.txt')
@@ -158,7 +156,6 @@ Deno.test.only('CheckSumChecker', async (t) => {
 			const _check = digits.at(-1)!
 			const check = _check === 'X' ? 10 : parseInt(_check)
 
-			console.log({ digits, content, check })
 			const checker = new CheckSumChecker(10n, 11n)
 			assertEquals(checker.getCheckSum(BigInt(content)), BigInt(check))
 		}

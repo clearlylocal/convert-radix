@@ -2,9 +2,7 @@ Deno.test('Converter.java', async () => {
 	for (
 		const [name, command] of Object.entries({
 			test: new Deno.Command('java', {
-				args: [
-					'src/Converter.java',
-				],
+				args: ['src/Converter.java'],
 				stdout: 'piped',
 				stderr: 'piped',
 			}),
